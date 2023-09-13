@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, \
     QLineEdit, QPushButton, QMainWindow, \
     QTableWidget, QTableWidgetItem, QDialog, \
-    QVBoxLayout, QComboBox
+    QVBoxLayout, QComboBox, QToolBar
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QIcon
 import sys
 import sqlite3
 
@@ -15,17 +15,18 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Student Management System")
+        self.setMinimumSize(800, 400)
+        
+        self.setWindowIcon(QIcon("icons/time.png"))
 
         file_menu_item = self.menuBar().addMenu("&File")
         help_menu_item = self.menuBar().addMenu("&Help")
         edit_menu_item = self.menuBar().addMenu("&Edit")
 
-        self.menuBar().setStyleSheet(
-            "padding: 1px; font-size: 12px; margin-top: 20px; color: black; font-weight: 700; background-color: #EBF0EC")
+        self.menuBar().setStyleSheet("color: black; font-weight: 700; background-color: lightgreen")
 
         # Add subitems to the File and Help items
-
-        add_student_action = QAction("Add Student", self)
+        add_student_action = QAction(QIcon("icons/add.png"), "Add Student", self)
         file_menu_item.addAction(add_student_action)
         file_menu_item.triggered.connect(self.insert)
 
@@ -33,24 +34,28 @@ class MainWindow(QMainWindow):
         help_menu_item.addAction(about_action)
         about_action.setMenuRole(QAction.MenuRole.NoRole)
 
-        search_action = QAction("Search", self)
+        search_action = QAction(QIcon("icons/search.png"), "Search", self)
         edit_menu_item.addAction(search_action)
         search_action.triggered.connect(self.search)
-        
 
         # Creating table widget to display database table for user
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(
-            ("ID", "Name", "Course", "Mobile Number"))
+        self.table.setHorizontalHeaderLabels(("ID", "Name", "Course", "Mobile Number"))
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setStyleSheet(
-            "font-weight: bold; background-color: lightblue;")
-
+        self.table.horizontalHeader().setStyleSheet("font-weight: bold;")
         self.setCentralWidget(self.table)
 
-    # display data to the user by fetching database
+        # Creating toolbar and add toolbar elements
+        toolbar = QToolBar()
+        toolbar.setStyleSheet("background-color: #EBDBF6")
+        toolbar.setMovable(True)
+        toolbar.setFixedSize(200, 40)
+        self.addToolBar(toolbar)
+        toolbar.addAction(add_student_action)
+        toolbar.addAction(search_action)
 
+    # display data to the user by fetching database
     def load_data(self):
         connection = sqlite3.connect("students.db")
         result = connection.execute("SELECT * FROM students")
@@ -63,16 +68,13 @@ class MainWindow(QMainWindow):
         connection.close()
 
     # instantiate insert dialog object from the class we made.
-
     def insert(self):
         dialog = InsertDialog()
         dialog.exec()
 
-    
     def search(self):
         dialog = SearchDialog()
         dialog.exec()
-
 
 
 # Adding search dialog window
@@ -91,11 +93,10 @@ class SearchDialog(QDialog):
         self.student_name.setPlaceholderText("name")
         self.student_name.setStyleSheet("border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
         layout.addWidget(self.student_name)
-        
+
         # Creating button
         button = QPushButton("Search")
-        button.setStyleSheet(
-            "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
+        button.setStyleSheet("background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
         button.clicked.connect(self.search)
         layout.addWidget(button)
 
@@ -103,20 +104,23 @@ class SearchDialog(QDialog):
 
     # Searching in database by name
     def search(self):
+
         name = self.student_name.text()
 
         connection = sqlite3.connect("students.db")
         cursor = connection.cursor()
-        result = cursor.execute("SELECT * FROM students WHERE name = ?", (name,))
+        result = cursor.execute(
+            "SELECT * FROM students WHERE name = ?", (name,))
         rows = list(result)
         print(rows)
-        items = main_window.table.findItems(name, Qt.MatchFlag.MatchFixedString)
+        items = main_window.table.findItems(
+            name, Qt.MatchFlag.MatchFixedString)
+
         for item in items:
             main_window.table.item(item.row(), 1).setSelected(True)
 
         cursor.close()
         connection.close()
-        
 
 
 # class for taking input from user and insert it into database table.
@@ -134,27 +138,23 @@ class InsertDialog(QDialog):
         # Add student name widget
         self.student_name = QLineEdit()
         self.student_name.setPlaceholderText("Name goes here..")
-        self.student_name.setStyleSheet(
-            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        self.student_name.setStyleSheet("border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
         layout.addWidget(self.student_name)
 
         # Add combo box of courses
         self.course_name = QComboBox()
         courses = ['Biology', 'Math', 'Astronomy', 'Physics']
         self.course_name.addItems(courses)
-        self.course_name.setStyleSheet(
-            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        self.course_name.setStyleSheet("border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
 
         # Add mobile widget
         self.mobile = QLineEdit()
         self.mobile.setPlaceholderText("Mobile Number")
-        self.mobile.setStyleSheet(
-            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        self.mobile.setStyleSheet("border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
 
         # Add submit button
         button = QPushButton("Register Student")
-        button.setStyleSheet(
-            "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
+        button.setStyleSheet("background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
         button.clicked.connect(self.register_student)
         button.clicked.connect(self.close)
 
