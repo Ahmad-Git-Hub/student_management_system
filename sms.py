@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (
     QApplication, QLabel, QWidget, QGridLayout, QLineEdit,
     QPushButton, QMainWindow, QTableWidget, QTableWidgetItem,
-    QDialog, QVBoxLayout, QComboBox, QToolBar
+    QDialog, QVBoxLayout, QComboBox, QToolBar, QStatusBar, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
@@ -19,37 +19,50 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Student Management System")
         self.setMinimumSize(800, 400)
         self.setWindowIcon(QIcon("icons/time.png"))
-
+        self.setStyleSheet("background-color: #86A3BE")
         # Create menu items
         file_menu_item = self.menuBar().addMenu("&File")
-        help_menu_item = self.menuBar().addMenu("&Help")
         edit_menu_item = self.menuBar().addMenu("&Edit")
+        help_menu_item = self.menuBar().addMenu("&Help")
 
         self.menuBar().setStyleSheet(
-            "color: black; font-weight: 700; background-color: lightgreen")
+            "color: purple; font-weight: 700; background-color: lightgreen; font-size: 14px; padding: 10px")
 
         # Add actions to the File, Edit And About menus
-        add_student_action = QAction(
-            QIcon("icons/add.png"), "Add Student", self)
-        file_menu_item.addAction(add_student_action)
-        file_menu_item.triggered.connect(self.insert)
 
-        about_action = QAction("About", self)
-        help_menu_item.addAction(about_action)
-        about_action.setMenuRole(QAction.MenuRole.NoRole)
+        # Add action
+        add_student_action = QAction(QIcon("icons/add.png"), "Add Student", self)
+        add_student_action.triggered.connect(self.insert)
 
+        # Search action
         search_action = QAction(QIcon("icons/search.png"), "Search", self)
-        edit_menu_item.addAction(search_action)
         search_action.triggered.connect(self.search)
 
+        # about action
+        about_action = QAction("About", self)
+        about_action.setMenuRole(QAction.MenuRole.NoRole)
+
+        # Adding all actions to the specified menu
+        file_menu_item.addAction(search_action)
+        edit_menu_item.addAction(add_student_action)
+        help_menu_item.addAction(about_action)
+      
+
+       
         # Create a table widget to display database data
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
             ("ID", "Name", "Course", "Mobile Number"))
+        self.table.setStyleSheet("font-size: 18px; color: white; font-weight: bold")
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setStyleSheet("font-weight: bold;")
+        self.table.horizontalHeader().setStyleSheet("font-weight: bold; color: darkblue")
         self.setCentralWidget(self.table)
+        
+
+        
+
+
 
         # Create and configure the toolbar
         toolbar = QToolBar()
@@ -60,7 +73,36 @@ class MainWindow(QMainWindow):
         toolbar.addAction(add_student_action)
         toolbar.addAction(search_action)
 
+        # Create and configure the status bar
+        self.statusbar = QStatusBar()
+        self.statusbar.setStyleSheet("font-weight: 700; background-color: lightgreen")
+        self.setStatusBar(self.statusbar)
+
+        
+        
+        edit_button = QPushButton("Edit Record")
+        edit_button.clicked.connect(self.edit)
+        edit_button.setStyleSheet("background-color: #39897E; color: white; font-size: 14px; border-radius: 10px; padding: 10px")
+
+
+        delete_button = QPushButton("Delete Record")
+        delete_button.clicked.connect(self.delete)
+        delete_button.setStyleSheet("background-color: #39897E; color: white; font-size: 14px; border-radius: 10px; padding: 10px")
+
+
+        children = self.findChildren(QPushButton)
+        if children :
+            for child in children:
+                self.statusbar.removeWidget(child)
+        self.statusbar.addWidget(edit_button)
+        self.statusbar.addWidget(delete_button)
+        
+        
+
     
+        
+
+
     def load_data(self):
         """Fetches data from the database and displays it in the table."""
         connection = sqlite3.connect("students.db")
@@ -72,8 +114,10 @@ class MainWindow(QMainWindow):
                 self.table.setItem(row_number, column_number,
                                    QTableWidgetItem(str(data)))
         connection.close()
+        self.table.resizeColumnsToContents()
 
-    # instantiate insert dialog object from the class we made.
+
+    # instantiate object from the classes we made.
     def insert(self):
         dialog = InsertDialog()
         dialog.exec()
@@ -81,6 +125,100 @@ class MainWindow(QMainWindow):
     def search(self):
         dialog = SearchDialog()
         dialog.exec()
+
+    def edit(self):
+        dialog = EditDialog()
+        dialog.exec()
+
+    def delete(self):
+        dialog = DeleteDialog()
+        dialog.exec()
+        
+
+
+class EditDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Update Student Data")
+        self.setFixedWidth(500)
+        self.setFixedHeight(300)
+        self.setStyleSheet("background-color: white")
+
+        layout = QVBoxLayout()
+
+        # Get current row (index) in table to extract specific columns
+        index = main_window.table.currentRow()
+        print(f"index is {index}")
+        # Get index for selected row
+        if index != -1:
+            self.id = main_window.table.item(index, 0).text()
+            # Extract name column
+            selected_name = main_window.table.item(index, 1).text()
+            # Extract course column
+            course = main_window.table.item(index, 2).text()
+            # Extract mobile number
+            mobile = main_window.table.item(index, 3).text()
+
+            # Add student name widget
+            self.student_name = QLineEdit(selected_name)
+            self.student_name.setPlaceholderText("Name goes here..")
+            self.student_name.setStyleSheet(
+                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+            layout.addWidget(self.student_name)
+
+            # Add combo box of courses
+            self.course_name = QComboBox()
+            courses = ['Biology', 'Math', 'Astronomy', 'Physics']
+            self.course_name.addItems(courses)
+            self.course_name.setCurrentText(course)
+            self.course_name.setStyleSheet(
+                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+
+
+            # Add mobile widget
+            self.mobile = QLineEdit(mobile)
+            self.mobile.setPlaceholderText("Mobile Number")
+            self.mobile.setStyleSheet(
+                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+
+            # Add an update button
+            button = QPushButton("Update")
+            button.setStyleSheet("background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
+            button.clicked.connect(self.update_record)
+            button.clicked.connect(self.close)
+
+            layout.addWidget(self.course_name)
+            layout.addWidget(self.mobile)
+            layout.addWidget(button)
+
+            self.setLayout(layout)
+        
+        else :
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle("Try Again")
+            msg_box.setText("Select a specific record to update...")
+            msg_box.setStyleSheet("background-color: gray; color: white; font-size: 24px")
+            msg_box.exec()
+                   
+
+
+    def update_record(self):
+        connection = sqlite3.connect("students.db")
+        cursor = connection.cursor()
+        cursor.execute("UPDATE students SET name = ?, course = ?, mobile =  ? WHERE id = ?", (
+                        self.student_name.text(),
+                        self.course_name.itemText(self.course_name.currentIndex()),
+                        self.mobile.text(), 
+                        self.id
+        ))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # Refresh the table
+        main_window.load_data()
+
 
 
 # Adding search dialog window
