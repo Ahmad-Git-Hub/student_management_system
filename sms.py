@@ -39,8 +39,8 @@ class MainWindow(QMainWindow):
         search_action.triggered.connect(self.search)
 
         # about action
-        about_action = QAction("About", self)
-        about_action.setMenuRole(QAction.MenuRole.NoRole)
+        about_action = QAction(QIcon("icons/about.png"), "About", self)
+        about_action.triggered.connect(self.about)
 
         # Adding all actions to the specified menu
         file_menu_item.addAction(search_action)
@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
 
         # Create a table widget to display database data
         self.table = QTableWidget()
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
             ("ID", "Name", "Course", "Mobile Number"))
@@ -67,6 +68,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
         toolbar.addAction(add_student_action)
         toolbar.addAction(search_action)
+        toolbar.addAction(about_action)
 
         # Create and configure the status bar
         self.statusbar = QStatusBar()
@@ -121,11 +123,80 @@ class MainWindow(QMainWindow):
         dialog = DeleteDialog()
         dialog.exec()
 
+    def about(self):
+        dialog = AboutDialog()
+        dialog.exec()
 
+
+# Adding about dialog window
+class AboutDialog(QMessageBox):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("About")
+        self.setStyleSheet(
+            "font-size: 20px; color: white;background-color: #00BFA5")
+        self.setWindowIcon(QIcon("icons/about.png"))
+        content = """
+Student management system that have basic crud functionality 
+created by Ahmad Mohamad Naji
+Feel free to modify the code."""
+        self.setText(content)
+
+
+# Adding delete dialog window
+class DeleteDialog(QDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Delete a student")
+        self.setWindowIcon(QIcon("icons/delete.png"))
+
+        self.setStyleSheet("background-color: #69897E")
+
+        layout = QGridLayout()
+
+        confirmation = QLabel("Are you sure you want to delete this record?")
+        confirmation.setStyleSheet(
+            "background-color: #69897E; color: white; font-size: 18px")
+        yes = QPushButton("Yes")
+        no = QPushButton("No")
+        yes.setStyleSheet(
+            "background-color: #39897E; color: white; font-size: 14px; border-radius: 6px; padding: 5px")
+        no.setStyleSheet(
+            "background-color: #39897E; color: white; font-size: 14px; border-radius: 6px; padding: 5px")
+
+        layout.addWidget(confirmation, 0, 0, 1, 2)
+        layout.addWidget(yes, 1, 0)
+        layout.addWidget(no, 1, 1)
+        self.setLayout(layout)
+        yes.clicked.connect(self.delete_student)
+
+    def delete_student(self):
+        index = main_window.table.currentRow()
+        student_id = main_window.table.item(index, 0).text()
+        connection = sqlite3.connect("students.db")
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM students WHERE id = ?", (student_id, ))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        main_window.load_data()
+        self.close()
+        confirmation_widget = QMessageBox()
+        confirmation_widget.setWindowTitle("Success")
+        confirmation_widget.setText("Student was deleted successfully")
+        confirmation_widget.setStyleSheet(
+            "font-size: 20px; background-color: #69897E; color: white; border: none;")
+        confirmation_widget.exec()
+
+
+# Adding edit dialog window
 class EditDialog(QDialog):
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle("Update Student Data")
+        self.setWindowIcon(QIcon("icons/update.png"))
         self.setFixedWidth(500)
         self.setFixedHeight(300)
         self.setStyleSheet("background-color: white")
@@ -134,58 +205,47 @@ class EditDialog(QDialog):
 
         # Get current row (index) in table to extract specific columns
         index = main_window.table.currentRow()
-        print(f"index is {index}")
-        # Get index for selected row
-        if index != -1:
-            self.id = main_window.table.item(index, 0).text()
-            # Extract name column
-            selected_name = main_window.table.item(index, 1).text()
-            # Extract course column
-            course = main_window.table.item(index, 2).text()
-            # Extract mobile number
-            mobile = main_window.table.item(index, 3).text()
 
-            # Add student name widget
-            self.student_name = QLineEdit(selected_name)
-            self.student_name.setPlaceholderText("Name goes here..")
-            self.student_name.setStyleSheet(
-                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
-            layout.addWidget(self.student_name)
+        self.id = main_window.table.item(index, 0).text()
+        # Extract name column
+        selected_name = main_window.table.item(index, 1).text()
+        # Extract course column
+        course = main_window.table.item(index, 2).text()
+        # Extract mobile number
+        mobile = main_window.table.item(index, 3).text()
 
-            # Add combo box of courses
-            self.course_name = QComboBox()
-            courses = ['Biology', 'Math', 'Astronomy', 'Physics']
-            self.course_name.addItems(courses)
-            self.course_name.setCurrentText(course)
-            self.course_name.setStyleSheet(
-                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        # Add student name widget
+        self.student_name = QLineEdit(selected_name)
+        self.student_name.setPlaceholderText("Name goes here..")
+        self.student_name.setStyleSheet(
+            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        layout.addWidget(self.student_name)
 
-            # Add mobile widget
-            self.mobile = QLineEdit(mobile)
-            self.mobile.setPlaceholderText("Mobile Number")
-            self.mobile.setStyleSheet(
-                "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
+        # Add combo box of courses
+        self.course_name = QComboBox()
+        courses = ['Biology', 'Math', 'Astronomy', 'Physics']
+        self.course_name.addItems(courses)
+        self.course_name.setCurrentText(course)
+        self.course_name.setStyleSheet(
+            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
 
-            # Add an update button
-            button = QPushButton("Update")
-            button.setStyleSheet(
-                "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
-            button.clicked.connect(self.update_record)
-            button.clicked.connect(self.close)
+        # Add mobile widget
+        self.mobile = QLineEdit(mobile)
+        self.mobile.setPlaceholderText("Mobile Number")
+        self.mobile.setStyleSheet(
+            "border-radius: 8px; font-size: 18px; padding: 10px; background-color: #39897E; color: white")
 
-            layout.addWidget(self.course_name)
-            layout.addWidget(self.mobile)
-            layout.addWidget(button)
+        # Add an update button
+        button = QPushButton("Update")
+        button.setStyleSheet(
+            "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
+        button.clicked.connect(self.update_record)
+        button.clicked.connect(self.close)
 
-            self.setLayout(layout)
-
-        else:
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Try Again")
-            msg_box.setText("Select a specific record to update...")
-            msg_box.setStyleSheet(
-                "background-color: gray; color: white; font-size: 24px")
-            msg_box.exec()
+        layout.addWidget(self.course_name)
+        layout.addWidget(self.mobile)
+        layout.addWidget(button)
+        self.setLayout(layout)
 
     def update_record(self):
         connection = sqlite3.connect("students.db")
@@ -212,6 +272,7 @@ class SearchDialog(QDialog):
         super().__init__()
         # Set window title and size
         self.setWindowTitle("Search For Student")
+        self.setWindowIcon(QIcon("icons/search.png"))
         self.setFixedWidth(500)
         self.setFixedHeight(300)
 
@@ -257,6 +318,8 @@ class SearchDialog(QDialog):
         cursor.close()
         connection.close()
 
+# Adding insert dialog window
+
 
 class InsertDialog(QDialog):
     """
@@ -268,6 +331,7 @@ class InsertDialog(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Insert Student Data")
+        self.setWindowIcon(QIcon("icons/add.png"))
         self.setFixedWidth(500)
         self.setFixedHeight(300)
         self.setStyleSheet("background-color: #EBDBF6")
