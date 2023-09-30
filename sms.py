@@ -10,6 +10,16 @@ import sys
 import sqlite3
 
 
+# Establish connection
+class DatabaseConnection:
+    def __init__(self, database_file="students.db"):
+        self.database_file = database_file
+
+    def connect(self):
+        connection = sqlite3.connect(self.database_file)
+        return connection
+
+
 # Define the main application window class
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -20,16 +30,18 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(800, 400)
         self.setWindowIcon(QIcon("icons/time.png"))
         self.setStyleSheet("background-color: #86A3BE")
+
         # Create menu items
         file_menu_item = self.menuBar().addMenu("&File")
         edit_menu_item = self.menuBar().addMenu("&Edit")
         help_menu_item = self.menuBar().addMenu("&Help")
 
+        # Add style to the menu
         self.menuBar().setStyleSheet(
             "color: white; font-weight: 700; background-color: #00BFA5; font-size: 14px; padding: 10px;")
 
-        # Add actions to the File, Edit And About menus
-        # Add action
+        # Adding actions to the File, Edit And About menus
+        # Add student action
         add_student_action = QAction(
             QIcon("icons/add.png"), "Add Student", self)
         add_student_action.triggered.connect(self.insert)
@@ -77,15 +89,14 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         edit_button = QPushButton("Edit Record")
-        edit_button.clicked.connect(self.edit)
+        edit_button.clicked.connect(self.check_for_edit)
         edit_button.setStyleSheet(
             "background-color: #39897E; color: white; font-size: 14px; border-radius: 10px; padding: 10px")
 
         delete_button = QPushButton("Delete Record")
-        delete_button.clicked.connect(self.delete)
+        delete_button.clicked.connect(self.check_for_delete)
         delete_button.setStyleSheet(
             "background-color: #39897E; color: white; font-size: 14px; border-radius: 10px; padding: 10px")
-
         children = self.findChildren(QPushButton)
         if children:
             for child in children:
@@ -95,7 +106,7 @@ class MainWindow(QMainWindow):
 
     def load_data(self):
         """Fetches data from the database and displays it in the table."""
-        connection = sqlite3.connect("students.db")
+        connection = DatabaseConnection().connect()
         result = connection.execute("SELECT * FROM students")
         self.table.setRowCount(0)
         for row_number, row_data in enumerate(result):
@@ -106,7 +117,29 @@ class MainWindow(QMainWindow):
         connection.close()
         self.table.resizeColumnsToContents()
 
+    def warning_message(self, content):
+        confirmation_widget = QMessageBox()
+        confirmation_widget.setWindowIcon(QIcon("icons/warning.png"))
+        confirmation_widget.setWindowTitle("Warning")
+        confirmation_widget.setText(content)
+        confirmation_widget.setStyleSheet(
+            "font-size: 20px; background-color: #EBDBF6; color: purple; border: none;")
+        confirmation_widget.exec()
+
+    def check_for_edit(self):
+        if main_window.table.currentRow() < 0:
+            self.warning_message("Please Select a user to edit")
+        else:
+            self.edit()
+
+    def check_for_delete(self):
+        if main_window.table.currentRow() < 0:
+            self.warning_message("Please select a user to delete!")
+        else:
+            self.delete()
+
     # instantiate object from the classes we made.
+
     def insert(self):
         dialog = InsertDialog()
         dialog.exec()
@@ -134,7 +167,7 @@ class AboutDialog(QMessageBox):
         super().__init__()
         self.setWindowTitle("About")
         self.setStyleSheet(
-            "font-size: 20px; color: white;background-color: #00BFA5")
+            "font-size: 20px; background-color: #EBDBF6; color: purple; border: none;")
         self.setWindowIcon(QIcon("icons/about.png"))
         content = """
 Student management system that have basic crud functionality 
@@ -169,12 +202,13 @@ class DeleteDialog(QDialog):
         layout.addWidget(yes, 1, 0)
         layout.addWidget(no, 1, 1)
         self.setLayout(layout)
-        yes.clicked.connect(self.delete_student)
+        yes.clicked.connect(self.delete_record)
+        no.clicked.connect(self.accept)
 
-    def delete_student(self):
+    def delete_record(self):
         index = main_window.table.currentRow()
         student_id = main_window.table.item(index, 0).text()
-        connection = sqlite3.connect("students.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("DELETE FROM students WHERE id = ?", (student_id, ))
         connection.commit()
@@ -184,9 +218,10 @@ class DeleteDialog(QDialog):
         self.close()
         confirmation_widget = QMessageBox()
         confirmation_widget.setWindowTitle("Success")
+        confirmation_widget.setWindowIcon(QIcon("icons/successful.png"))
         confirmation_widget.setText("Student was deleted successfully")
         confirmation_widget.setStyleSheet(
-            "font-size: 20px; background-color: #69897E; color: white; border: none;")
+            "font-size: 20px; background-color: #EBDBF6; color: purple; border: none;")
         confirmation_widget.exec()
 
 
@@ -239,7 +274,7 @@ class EditDialog(QDialog):
         button = QPushButton("Update")
         button.setStyleSheet(
             "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
-        button.clicked.connect(self.update_record)
+        button.clicked.connect(self.edit_record)
         button.clicked.connect(self.close)
 
         layout.addWidget(self.course_name)
@@ -247,8 +282,8 @@ class EditDialog(QDialog):
         layout.addWidget(button)
         self.setLayout(layout)
 
-    def update_record(self):
-        connection = sqlite3.connect("students.db")
+    def edit_record(self):
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("UPDATE students SET name = ?, course = ?, mobile =  ? WHERE id = ?", (
             self.student_name.text(),
@@ -288,14 +323,14 @@ class SearchDialog(QDialog):
         button = QPushButton("Search")
         button.setStyleSheet(
             "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
-        button.clicked.connect(self.search)
+        button.clicked.connect(self.search_record)
         button.clicked.connect(self.close)
         layout.addWidget(button)
 
         self.setLayout(layout)
 
     # Searching in database by name
-    def search(self):
+    def search_record(self):
         """Searches the database for students with the given name.
         Args:
             self: the object
@@ -303,24 +338,23 @@ class SearchDialog(QDialog):
         """
 
         name = self.student_name.text()
-        connection = sqlite3.connect("students.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         result = cursor.execute(
             "SELECT * FROM students WHERE name = ?", (name,))
         rows = list(result)
-        print(rows)
-        items = main_window.table.findItems(
-            name, Qt.MatchFlag.MatchFixedString)
-
-        for item in items:
-            main_window.table.item(item.row(), 1).setSelected(True)
+        if len(rows) == 0:
+            MainWindow.warning_message(self, "No student matching the provided name was found in the database.")
+        else:
+            items = main_window.table.findItems(
+                name, Qt.MatchFlag.MatchFixedString)
+            for item in items:
+                main_window.table.item(item.row(), 1).setSelected(True)
 
         cursor.close()
         connection.close()
 
 # Adding insert dialog window
-
-
 class InsertDialog(QDialog):
     """
     class for taking input from user and insert it into database table.
@@ -362,7 +396,7 @@ class InsertDialog(QDialog):
         button = QPushButton("Register Student")
         button.setStyleSheet(
             "background-color: #39897E; color: white; font-size: 20px; border-radius: 20px; padding: 10px")
-        button.clicked.connect(self.register_student)
+        button.clicked.connect(self.insert_record)
         button.clicked.connect(self.close)
 
         layout.addWidget(self.course_name)
@@ -372,7 +406,7 @@ class InsertDialog(QDialog):
         self.setLayout(layout)
 
     # connect to database to insert data
-    def register_student(self):
+    def insert_record(self):
         """
         Inserts a new student record into the database.
         Args : self.->
@@ -383,7 +417,7 @@ class InsertDialog(QDialog):
         name = self.student_name.text()
         course = self.course_name.itemText(self.course_name.currentIndex())
         mobile = self.mobile.text()
-        connection = sqlite3.connect("students.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("INSERT INTO students (name, course, mobile) VALUES (?, ?, ?)",
                        (name, course, mobile))
