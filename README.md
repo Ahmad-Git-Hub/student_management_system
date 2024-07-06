@@ -1,9 +1,26 @@
-# Student_Management_System_Desktop
-## simple management system with simple GUI using python and PyQt6 library and CSS
-### this not a personal project. I made this project through taking course below 
-[https://www.udemy.com/course/the-python-mega-course] 
-#### I added style using css and some extra funcitonality to improve user experience
+# Student Management System Desktop Application
 
+A simple management system with a graphical user interface built using Python, PyQt6, and SQLite3. This application allows users to manage student records, including adding, editing, searching, and deleting student information.
+
+## Features
+- Add new student records
+- Edit existing student information
+- Search for students by name
+- Delete student records
+- User-friendly GUI with CSS styling
+
+## Technologies Used
+- Python
+- PyQt6
+- SQLite3
+- CSS (for styling)
+- visual studio code Editor
+
+
+## Installation
+1. Ensure you have Python 3.x installed
+2. Clone this repository
+3. Install required dependencies:
 
 ![Screenshot main](https://raw.githubusercontent.com/Ahmad-Git-Hub/student_management_system/master/screenshots/main.png)
 
@@ -15,8 +32,6 @@
 
 ![Screenshot4](https://raw.githubusercontent.com/Ahmad-Git-Hub/student_management_system/master/screenshots/update.png)
 
-visual studio code Editor
-sqlit3 database
 
 
 
